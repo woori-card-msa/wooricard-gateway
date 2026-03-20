@@ -15,21 +15,21 @@ spring:
       server:
         webflux:
           routes:
-            # 승인/결제 서비스
-            - id: approval-service
-              uri: lb://wooricard-approval-service          # Eureka 없을 시: uri: http://localhost:8081
+            # 승인/결제 서비스 — Eureka 서비스명: wooricard-approval-service
+            - id: wooricard-approval-service
+              uri: lb://wooricard-approval-service
               predicates:
                 - Path=/api/authorizations,/api/authorizations/**,/api/authorization/**,/api/health
 
-            # 정산 서비스
-            - id: settlement-service
-              uri: lb://wooricard-settlement-service        # Eureka 없을 시: uri: http://localhost:8082
+            # 정산 서비스 — Eureka 서비스명: wooricard-settlement-service
+            - id: wooricard-settlement-service
+              uri: lb://wooricard-settlement-service
               predicates:
                 - Path=/api/settlement/**
 
-            # 매입 청구 서비스
-            - id: billing-service
-              uri: lb://wooricard-billing-service           # Eureka 없을 시: uri: http://localhost:8083
+            # 매입 청구 서비스 — Eureka 서비스명: wooricard-billing-service
+            - id: wooricard-billing-service
+              uri: lb://wooricard-billing-service
               predicates:
                 - Path=/api/billing/**
 

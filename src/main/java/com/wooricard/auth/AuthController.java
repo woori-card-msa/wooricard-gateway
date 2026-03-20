@@ -11,8 +11,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -78,5 +80,42 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(request.getClientId());
         return ResponseEntity.ok(Map.of("access_token", token, "token_type", "Bearer"));
+    }
+
+    @Operation(
+            summary = "JWT 토큰 유효성 검사",
+            description = "Authorization 헤더의 Bearer 토큰이 유효한지 확인합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "유효한 토큰",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "valid": true,
+                                      "clientId": "vensa"
+                                    }
+                                    """))),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰",
+                    content = @Content(mediaType = "application/json",
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "valid": false,
+                                      "error": "Invalid or expired token"
+                                    }
+                                    """)))
+    })
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken(
+            @org.springframework.web.bind.annotation.RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("valid", false, "error", "Invalid or expired token"));
+        }
+        String token = authHeader.substring(7);
+        if (!jwtUtil.isValid(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("valid", false, "error", "Invalid or expired token"));
+        }
+        return ResponseEntity.ok(Map.of("valid", true, "clientId", jwtUtil.getClientId(token)));
     }
 }

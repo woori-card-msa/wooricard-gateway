@@ -51,4 +51,8 @@ public class JwtUtil {
             return false;
         }
     }
+
+    public String getClientId(String token) {
+        return validateToken(token).getSubject();
+    }
 }

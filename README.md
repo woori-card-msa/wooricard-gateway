@@ -9,16 +9,15 @@ Spring Cloud Gateway 기반 API Gateway 서비스
 ```
 Client
   │
-  ▼
-POST /auth/token  →  JWT 발급
+  ├── POST /auth/token     → JWT 발급
+  ├── GET  /auth/validate  → 토큰 유효성 확인
   │
-  ▼
-API Gateway (8080)  ──── Eureka Server (8761)
-  │  Authorization: Bearer <token> 검증
-  │
-  ├── /api/authorizations/**  ──► 승인/결제 서비스 (8081)
-  ├── /api/settlement/**      ──► 정산 서비스     (8082)
-  └── /api/billing/**         ──► 매입 청구 서비스 (8083)
+  └── GET|POST /api/**  →  JWT 검증 → Eureka 조회 → 서비스 전달
+                                          │
+                          ┌───────────────┼───────────────┐
+                          ▼               ▼               ▼
+               approval-service  settlement-service  billing-service
+                   (8081)             (8082)             (8083)
 ```
 
 ---
@@ -50,13 +49,25 @@ API Gateway (8080)  ──── Eureka Server (8761)
 
 ---
 
-## Swagger UI
+## Gateway 엔드포인트
 
-게이트웨이 실행 후 아래 주소에서 API 문서를 확인할 수 있습니다.
+| Method | URL | 설명 | 인증 필요 |
+|--------|-----|------|----------|
+| POST | `/auth/token` | JWT 토큰 발급 | X |
+| GET | `/auth/validate` | 토큰 유효성 확인 | O |
 
-```
-http://192.168.1.249:8080/swagger-ui.html
-```
+---
+
+## 라우팅 규칙
+
+요청 경로에 따라 Eureka에서 서비스를 찾아 자동으로 전달합니다.
+
+| 경로 | Eureka 서비스명 |
+|------|----------------|
+| `/api/authorizations/**` | `wooricard-approval-service` |
+| `/api/authorization/**` | `wooricard-approval-service` |
+| `/api/settlement/**` | `wooricard-settlement-service` |
+| `/api/billing/**` | `wooricard-billing-service` |
 
 ---
 
@@ -64,7 +75,7 @@ http://192.168.1.249:8080/swagger-ui.html
 
 ### Step 1 — Environment 변수 설정
 
-APIdog 좌측 **Environments → New Environment** 생성 후 아래 변수 추가
+**Environments → New Environment** 생성 후 아래 변수 추가
 
 | Variable | Value |
 |---|---|
@@ -93,49 +104,55 @@ URL    : {{base_url}}/auth/token
 }
 ```
 
-**Post-response Script** (응답 후 자동으로 토큰 저장)
+**Post-response Script** (토큰 자동 저장)
 
 ```javascript
 var res = pm.response.json();
 pm.environment.set("access_token", res.access_token);
 ```
 
-**응답 예시**
+---
 
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "token_type": "Bearer"
-}
+### Step 3 — 토큰 유효성 확인
+
 ```
+Method : GET
+URL    : {{base_url}}/auth/validate
+Header : Authorization: Bearer {{access_token}}
+```
+
+| 응답 | 의미 |
+|------|------|
+| `200 {"valid": true, "clientId": "vensa"}` | 정상 토큰 |
+| `401 {"valid": false, ...}` | 만료 또는 잘못된 토큰 |
 
 ---
 
-### Step 3 — 서비스 요청
+### Step 4 — 서비스 요청
 
-모든 요청의 **Headers** 에 아래 값 추가
+모든 요청 Headers에 추가:
 
 | Key | Value |
 |---|---|
 | `Authorization` | `Bearer {{access_token}}` |
 
-**승인/결제 서비스 엔드포인트**
+이후 각 서비스의 엔드포인트는 **담당자의 Swagger UI**를 참고하세요.
 
-| Method | URL | 설명 |
-|--------|-----|------|
-| GET | `{{base_url}}/api/authorizations` | 승인 내역 조회 |
-| POST | `{{base_url}}/api/authorizations/request` | 카드 승인 요청 |
-| POST | `{{base_url}}/api/authorizations/cancel` | 승인 취소 |
-| GET | `{{base_url}}/api/authorization/approved/monthly` | 월별 승인 내역 조회 |
-
-**정산/매입 서비스 엔드포인트**
-
-| Method | URL | 설명 |
-|--------|-----|------|
-| GET | `{{base_url}}/api/settlement/...` | 정산 서비스 |
-| GET | `{{base_url}}/api/billing/...` | 매입 청구 서비스 |
+| 서비스 | Swagger UI |
+|--------|-----------|
+| 승인/결제 | `http://192.168.1.{IP}:8081/swagger-ui.html` |
+| 정산 | `http://192.168.1.{IP}:8082/swagger-ui.html` |
+| 매입 청구 | `http://192.168.1.{IP}:8083/swagger-ui.html` |
 
 > 토큰 만료(1시간) 시 Step 2를 다시 실행하면 `access_token`이 자동 갱신됩니다.
+
+---
+
+## Swagger UI
+
+```
+http://192.168.1.249:8080/swagger-ui.html
+```
 
 ---
 
