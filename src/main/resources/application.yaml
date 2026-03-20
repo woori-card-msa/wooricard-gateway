@@ -19,7 +19,7 @@ spring:
             - id: approval-service
               uri: lb://wooricard-approval-service          # Eureka 없을 시: uri: http://localhost:8081
               predicates:
-                - Path=/api/approval/**
+                - Path=/api/authorizations,/api/authorizations/**,/api/authorization/**,/api/health
 
             # 정산 서비스
             - id: settlement-service
@@ -52,6 +52,16 @@ eureka:
     ip-address: 192.168.1.249
     prefer-ip-address: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    display-request-duration: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
@@ -61,4 +71,4 @@ jwt:
   expiration-ms: 3600000  # 1시간
   client:
     id: vensa
-    secret: vensa-secret-2024
+    secret: vensa-secret-2026

@@ -4,17 +4,10 @@ Spring Cloud Gateway 기반 API Gateway 서비스
 
 ---
 
-## 프로젝트 개요
-
-카드 처리 MSA 시스템의 단일 진입점(API Gateway) 역할을 담당합니다.
-클라이언트의 모든 요청을 받아 각 마이크로서비스로 라우팅하며, JWT 기반 인증을 통해 인가된 클라이언트만 접근할 수 있도록 합니다.
-
----
-
-## 시스템 아키텍처
+## 아키텍처
 
 ```
-Client (vensa)
+Client
   │
   ▼
 POST /auth/token  →  JWT 발급
@@ -23,9 +16,9 @@ POST /auth/token  →  JWT 발급
 API Gateway (8080)  ──── Eureka Server (8761)
   │  Authorization: Bearer <token> 검증
   │
-  ├── /api/approval/**   ──► 승인/결제 서비스 (8081)
-  ├── /api/settlement/** ──► 정산 서비스     (8082)
-  └── /api/billing/**    ──► 매입 청구 서비스 (8083)
+  ├── /api/authorizations/**  ──► 승인/결제 서비스 (8081)
+  ├── /api/settlement/**      ──► 정산 서비스     (8082)
+  └── /api/billing/**         ──► 매입 청구 서비스 (8083)
 ```
 
 ---
@@ -37,135 +30,77 @@ API Gateway (8080)  ──── Eureka Server (8761)
 | Java | 17 |
 | Spring Boot | 3.5.12 |
 | Spring Cloud | 2025.0.0 |
-| Spring Cloud Gateway | - |
-| Spring Cloud Netflix Eureka Client | - |
-| Spring Security (WebFlux) | - |
 | jjwt | 0.12.6 |
-| Lombok | - |
+| springdoc-openapi | 2.8.5 |
 
 ---
 
-## 인증 방식 (JWT)
-
-모든 API 요청은 JWT 토큰이 필요합니다. `/auth/token`을 통해 토큰을 발급받은 뒤, 이후 요청의 헤더에 포함해야 합니다.
-
-### 인증 흐름
+## 실행 순서
 
 ```
-1. POST /auth/token  → JWT 발급
-2. GET  /api/...     → Authorization: Bearer <token> 헤더 포함
-3. 토큰 없음 / 만료  → 401 Unauthorized 반환
+1. wooricard-eureka     (8761)
+2. wooricard-config     (8888)
+3. wooricard-gateway    (8080)  ← 이 서비스
+4. 각 마이크로서비스
 ```
-
-### 토큰 발급
-
-```
-POST http://192.168.1.249:8080/auth/token
-Content-Type: application/json
-
-{
-  "clientId": "vensa",
-  "clientSecret": "vensa-secret-2024"
-}
-```
-
-응답:
-```json
-{
-  "access_token": "eyJ...",
-  "token_type": "Bearer"
-}
-```
-
-### API 요청 시 헤더
-
-```
-Authorization: Bearer eyJ...
-```
-
-> `clientId`, `clientSecret`은 `application.yaml`의 `jwt.client` 항목에서 관리합니다.
-> 토큰 만료 시간은 기본 1시간이며 `jwt.expiration-ms` 항목에서 변경 가능합니다.
-
----
-
-## 라우팅 규칙
-
-| 서비스 | 경로 패턴 | 연결 방식 (Eureka) | 연결 방식 (로컬) |
-|--------|----------|--------------------|-----------------|
-| 승인/결제 서비스 | `/api/approval/**` | `lb://wooricard-approval-service` | `http://localhost:8081` |
-| 정산 서비스 | `/api/settlement/**` | `lb://wooricard-settlement-service` | `http://localhost:8082` |
-| 매입 청구 서비스 | `/api/billing/**` | `lb://wooricard-billing-service` | `http://localhost:8083` |
-
----
-
-## 실행 방법
-
-### 실행 순서 (운영/통합 환경)
-
-```
-1. wooricard-eureka     (port: 8761)
-2. wooricard-config     (port: 8888)
-3. wooricard-gateway    (port: 8080)  ← 이 서비스
-4. 각 마이크로서비스 실행
-```
-
-### 실행 명령
 
 ```bash
 ./gradlew bootRun
 ```
 
-IntelliJ: `Active profiles` 비워두고 실행
+---
+
+## Swagger UI
+
+게이트웨이 실행 후 아래 주소에서 API 문서를 확인할 수 있습니다.
+
+```
+http://192.168.1.249:8080/swagger-ui.html
+```
 
 ---
 
 ## API 테스트 (APIdog)
 
-### Base URL
+### Step 1 — Environment 변수 설정
 
-```
-http://192.168.1.249:8080
-```
-
----
-
-### Step 1 — Environment 생성
-
-APIdog 좌측 **Environments → New Environment** 생성 (이름 예: `wooricard-dev`)
+APIdog 좌측 **Environments → New Environment** 생성 후 아래 변수 추가
 
 | Variable | Value |
 |---|---|
 | `base_url` | `http://192.168.1.249:8080` |
-| `access_token` | *(비워둠 — 자동으로 채워짐)* |
+| `access_token` | (비워둠) |
 
-생성 후 우측 상단에서 `wooricard-dev` 환경을 **활성화** 합니다.
+생성 후 우측 상단에서 해당 환경 **활성화**
 
 ---
 
-### Step 2 — 토큰 발급 요청 생성
+### Step 2 — 토큰 발급
 
-새 요청을 생성합니다.
+**요청**
 
 ```
 Method : POST
 URL    : {{base_url}}/auth/token
 ```
 
-**Body 탭 → JSON 선택:**
+**Body (JSON)**
+
 ```json
 {
   "clientId": "vensa",
-  "clientSecret": "vensa-secret-2024"
+  "clientSecret": "vensa-secret-2026"
 }
 ```
 
-**Post-response 탭 → 스크립트 입력:**
+**Post-response Script** (응답 후 자동으로 토큰 저장)
+
 ```javascript
 var res = pm.response.json();
 pm.environment.set("access_token", res.access_token);
 ```
 
-요청을 보내면 응답이 오고, `access_token` 환경변수에 토큰이 자동 저장됩니다.
+**응답 예시**
 
 ```json
 {
@@ -176,92 +111,46 @@ pm.environment.set("access_token", res.access_token);
 
 ---
 
-### Step 3 — 서비스 요청에 토큰 적용
+### Step 3 — 서비스 요청
 
-승인/결제, 정산, 매입 청구 요청 **각각** 아래와 같이 설정합니다.
-
-**Headers 탭에 추가:**
+모든 요청의 **Headers** 에 아래 값 추가
 
 | Key | Value |
 |---|---|
 | `Authorization` | `Bearer {{access_token}}` |
 
-`{{access_token}}`은 Step 2에서 저장된 환경변수를 자동으로 참조합니다.
+**승인/결제 서비스 엔드포인트**
 
-**요청 URL 예시:**
+| Method | URL | 설명 |
+|--------|-----|------|
+| GET | `{{base_url}}/api/authorizations` | 승인 내역 조회 |
+| POST | `{{base_url}}/api/authorizations/request` | 카드 승인 요청 |
+| POST | `{{base_url}}/api/authorizations/cancel` | 승인 취소 |
+| GET | `{{base_url}}/api/authorization/approved/monthly` | 월별 승인 내역 조회 |
 
-| 서비스 | Method | URL |
-|--------|--------|-----|
-| 승인/결제 | GET | `{{base_url}}/api/approval/{endpoint}` |
-| 정산 | GET | `{{base_url}}/api/settlement/{endpoint}` |
-| 매입 청구 | GET | `{{base_url}}/api/billing/{endpoint}` |
+**정산/매입 서비스 엔드포인트**
+
+| Method | URL | 설명 |
+|--------|-----|------|
+| GET | `{{base_url}}/api/settlement/...` | 정산 서비스 |
+| GET | `{{base_url}}/api/billing/...` | 매입 청구 서비스 |
+
+> 토큰 만료(1시간) 시 Step 2를 다시 실행하면 `access_token`이 자동 갱신됩니다.
 
 ---
 
-### 토큰 만료 시 (1시간)
+## 주의사항
 
-`401 Unauthorized` 응답이 오면 Step 2의 토큰 발급 요청을 다시 보냅니다.
-환경변수 `access_token`이 새 토큰으로 자동 갱신되며, 이후 요청은 정상 처리됩니다.
+와이파이 환경이 바뀌면 `application.yaml` 의 아래 두 항목을 현재 IP로 수정해야 합니다.
 
----
-
-## 프로젝트 구조
-
-```
-wooricard-gateway/
-├── src/
-│   ├── main/
-│   │   ├── java/com/wooricard/
-│   │   │   ├── WooricardGatewayApplication.java
-│   │   │   ├── auth/
-│   │   │   │   ├── AuthController.java       # POST /auth/token
-│   │   │   │   └── TokenRequest.java         # 요청 DTO
-│   │   │   ├── filter/
-│   │   │   │   └── JwtAuthGlobalFilter.java  # 전역 JWT 검증 필터
-│   │   │   ├── security/
-│   │   │   │   └── SecurityConfig.java       # Spring Security 설정
-│   │   │   └── util/
-│   │   │       └── JwtUtil.java              # JWT 생성/검증 유틸
-│   │   └── resources/
-│   │       └── application.yaml             # 운영/통합용 (Eureka + JWT 설정)
-│   └── test/
-│       ├── java/com/wooricard/
-│       │   └── WooricardGatewayApplicationTests.java
-│       └── resources/
-│           └── application.yaml             # 테스트용 (Eureka 없이 단독 실행)
-├── build.gradle
-└── README.md
+```yaml
+eureka:
+  client:
+    service-url:
+      defaultZone: http://{Eureka서버IP}:8761/eureka/
+  instance:
+    ip-address: {이 서버 IP}
 ```
 
----
-
-## 상태 확인
-
-서버를 실행한 후 아래 주소에서 Eureka 등록 여부를 확인하세요.
-
-> ⚠️ **Eureka 서버 IP 주의:** 와이파이 환경이 바뀌면 `application.yaml`의 `eureka.client.service-url.defaultZone`과 `eureka.instance.ip-address`를 현재 IP로 수정해야 합니다.
-
-- **Eureka 대시보드:** http://192.168.1.80:8761
-- **Gateway 주소:** http://192.168.1.249:8080
-
-### Eureka 등록 확인 대상
-
-| 서비스명 | Eureka 등록 이름 |
-|---------|----------------|
-| wooricard-gateway | `WOORICARD-GATEWAY` |
-| wooricard-approval-service | `WOORICARD-APPROVAL-SERVICE` |
-| wooricard-settlement-service | `WOORICARD-SETTLEMENT-SERVICE` |
-| wooricard-billing-service | `WOORICARD-BILLING-SERVICE` |
-
----
-
-## 관련 서비스
-
-| 서비스명 | 포트 | 설명 |
-|---------|------|------|
-| wooricard-gateway | 8080 | API Gateway (현재 서비스) |
-| wooricard-approval-service | 8081 | 승인/결제 처리 |
-| wooricard-settlement-service | 8082 | 정산 처리 |
-| wooricard-billing-service | 8083 | 매입 청구 처리 |
-| wooricard-eureka | 8761 | 서비스 디스커버리 |
-| wooricard-config | 8888 | 설정 서버 |
+- Eureka 대시보드: `http://192.168.1.80:8761`
+- Gateway: `http://192.168.1.249:8080`

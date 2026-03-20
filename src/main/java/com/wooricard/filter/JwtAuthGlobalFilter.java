@@ -21,8 +21,11 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        // /auth/** 는 인증 없이 통과
-        if (path.startsWith("/auth/")) {
+        // 인증 없이 통과할 경로
+        if (path.startsWith("/auth/")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/webjars/")) {
             return chain.filter(exchange);
         }
 
