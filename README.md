@@ -66,7 +66,7 @@ Client
 |------|----------------|
 | `/api/authorizations/**` | `wooricard-approval-service` |
 | `/api/authorization/**` | `wooricard-approval-service` |
-| `/api/settlement/**` | `wooricard-settlement-service` |
+| `/api/settlements/**` | `wooricard-settlement-service` |
 | `/api/billing/**` | `wooricard-billing-service` |
 
 ---
@@ -88,11 +88,9 @@ Client
 
 ### Step 2 — 토큰 발급
 
-**요청**
-
 ```
 Method : POST
-URL    : {{base_url}}/auth/token
+URL    : http://192.168.1.249:8080/auth/token
 ```
 
 **Body (JSON)**
@@ -117,7 +115,7 @@ pm.environment.set("access_token", res.access_token);
 
 ```
 Method : GET
-URL    : {{base_url}}/auth/validate
+URL    : http://192.168.1.249:8080/auth/validate
 Header : Authorization: Bearer {{access_token}}
 ```
 
@@ -130,21 +128,32 @@ Header : Authorization: Bearer {{access_token}}
 
 ### Step 4 — 서비스 요청
 
-모든 요청 Headers에 추가:
+모든 요청 Headers:
 
 | Key | Value |
 |---|---|
 | `Authorization` | `Bearer {{access_token}}` |
 
-이후 각 서비스의 엔드포인트는 **담당자의 Swagger UI**를 참고하세요.
+**승인/결제 서비스**
 
-| 서비스 | Swagger UI |
-|--------|-----------|
-| 승인/결제 | `http://192.168.1.{IP}:8081/swagger-ui.html` |
-| 정산 | `http://192.168.1.{IP}:8082/swagger-ui.html` |
-| 매입 청구 | `http://192.168.1.{IP}:8083/swagger-ui.html` |
+```
+GET  http://192.168.1.249:8080/api/authorizations
+```
 
-> 토큰 만료(1시간) 시 Step 2를 다시 실행하면 `access_token`이 자동 갱신됩니다.
+**정산 서비스**
+
+```
+POST http://192.168.1.249:8080/api/settlements/trigger?date=2026-03-20
+```
+
+**매입 청구 서비스**
+
+```
+GET  http://192.168.1.249:8080/api/billing/
+```
+
+> 각 서비스의 전체 엔드포인트 목록은 담당자 Swagger UI 참고
+> 토큰 만료(1시간) 시 Step 2를 다시 실행하면 `access_token` 자동 갱신
 
 ---
 
