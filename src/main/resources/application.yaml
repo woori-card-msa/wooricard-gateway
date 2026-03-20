@@ -49,9 +49,16 @@ eureka:
     fetch-registry: true
     should-enforce-registration-at-init: false
   instance:
-    ip-address: 192.168.0.26
+    ip-address: 192.168.1.249
     prefer-ip-address: true
 
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+jwt:
+  secret: wooricard-gateway-jwt-secret-key-must-be-at-least-32-characters
+  expiration-ms: 3600000  # 1시간
+  client:
+    id: vensa
+    secret: vensa-secret-2024
