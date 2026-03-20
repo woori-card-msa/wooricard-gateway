@@ -17,19 +17,19 @@ spring:
           routes:
             # 승인/결제 서비스
             - id: approval-service
-              uri: lb://approval-service          # Eureka 없을 시: uri: http://localhost:8081
+              uri: lb://wooricard-approval-service          # Eureka 없을 시: uri: http://localhost:8081
               predicates:
                 - Path=/api/approval/**
 
             # 정산 서비스
             - id: settlement-service
-              uri: lb://settlement-service        # Eureka 없을 시: uri: http://localhost:8082
+              uri: lb://wooricard-settlement-service        # Eureka 없을 시: uri: http://localhost:8082
               predicates:
                 - Path=/api/settlement/**
 
             # 매입 청구 서비스
             - id: billing-service
-              uri: lb://billing-service           # Eureka 없을 시: uri: http://localhost:8083
+              uri: lb://wooricard-billing-service           # Eureka 없을 시: uri: http://localhost:8083
               predicates:
                 - Path=/api/billing/**
 
@@ -43,10 +43,14 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      # TODO: 유레카 서버 IP - 와이파이 환경 변경 시 이 주소를 수정해야 함
+      defaultZone: http://192.168.1.80:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
     should-enforce-registration-at-init: false
+  instance:
+    ip-address: 192.168.0.26
+    prefer-ip-address: true
 
 logging:
   level:

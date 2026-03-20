@@ -41,11 +41,11 @@ API Gateway (8080)  ──── Eureka Server (8761)
 
 ## 라우팅 규칙
 
-| 서비스 | 경로 패턴 | 연결 방식 |
-|--------|----------|----------|
-| 승인/결제 서비스 (wooricard-approval-service) | `/api/approval/**` | `lb://approval-service` |
-| 정산 서비스 (wooricard-settlement-service) | `/api/settlement/**` | `lb://settlement-service` |
-| 매입 청구 서비스 (wooricard-billing-service) | `/api/billing/**` | `lb://billing-service` |
+| 서비스 | 경로 패턴 | 연결 방식 (Eureka) | 연결 방식 (로컬) |
+|--------|----------|--------------------|-----------------|
+| 승인/결제 서비스 (wooricard-approval-service) | `/api/approval/**` | `lb://wooricard-approval-service` | `http://localhost:8081` |
+| 정산 서비스 (wooricard-settlement-service) | `/api/settlement/**` | `lb://wooricard-settlement-service` | `http://localhost:8082` |
+| 매입 청구 서비스 (wooricard-billing-service) | `/api/billing/**` | `lb://wooricard-billing-service` | `http://localhost:8083` |
 
 ---
 
@@ -60,34 +60,13 @@ API Gateway (8080)  ──── Eureka Server (8761)
 4. 각 마이크로서비스 실행
 ```
 
-### 프로파일별 실행 방법
-
-#### 운영/통합 프로파일 (Eureka 연동)
-> Eureka 서버가 실행 중일 때 사용
+### 실행 방법
 
 ```bash
 ./gradlew bootRun
 ```
 
 IntelliJ: `Active profiles` 비워두고 실행
-
-#### 로컬 테스트 프로파일 (Eureka 없이 정적 라우팅)
-> Eureka 서버 없이 각 서비스 포트로 직접 연결할 때 사용
-
-```bash
-./gradlew bootRun --args='--spring.profiles.active=local'
-```
-
-IntelliJ: `Edit Configurations` → `Active profiles` → `local` 입력 후 실행
-
----
-
-## 프로파일 구성
-
-| 프로파일 | 파일 | 라우팅 방식 | Eureka 필요 여부 |
-|---------|------|-----------|----------------|
-| 기본 (없음) | `application.yaml` | `lb://서비스명` | O |
-| `local` | `application.yaml` + `application-local.yaml` | `http://localhost:포트` | X |
 
 ---
 
@@ -132,8 +111,7 @@ wooricard-gateway/
 │   │   ├── java/com/wooricard/
 │   │   │   └── WooricardGatewayApplication.java
 │   │   └── resources/
-│   │       ├── application.yaml          # 운영/통합용 (Eureka 연동)
-│   │       └── application-local.yaml    # 로컬 테스트용 (정적 라우팅)
+│   │       └── application.yaml          # 운영/통합용 (Eureka 연동)
 │   └── test/
 │       ├── java/com/wooricard/
 │       │   └── WooricardGatewayApplicationTests.java
@@ -149,16 +127,19 @@ wooricard-gateway/
 
 서버를 실행한 후 아래 주소에 접속하여 본인의 서비스 이름이 **Instances currently registered with Eureka** 목록에 뜨는지 확인하세요.
 
+> ⚠️ **Eureka 서버 IP 주의:** 와이파이 환경이 바뀌면 `application.yaml`의 `eureka.client.service-url.defaultZone` 주소를 현재 유레카 서버 IP로 수정해야 합니다.
+
+- **Eureka 대시보드:** http://192.168.1.80:8761 (현재 와이파이 기준 — 변경 시 수정 필요)
 - **Gateway 상태:** http://192.168.0.26:8080
 
-### 등록 확인 대상
+### Eureka 등록 확인 대상
 
 | 서비스명 | Eureka 등록 이름 |
 |---------|----------------|
 | wooricard-gateway | `WOORICARD-GATEWAY` |
-| wooricard-approval-service | `APPROVAL-SERVICE` |
-| wooricard-settlement-service | `SETTLEMENT-SERVICE` |
-| wooricard-billing-service | `BILLING-SERVICE` |
+| wooricard-approval-service | `WOORICARD-APPROVAL-SERVICE` |
+| wooricard-settlement-service | `WOORICARD-SETTLEMENT-SERVICE` |
+| wooricard-billing-service | `WOORICARD-BILLING-SERVICE` |
 
 ---
 
