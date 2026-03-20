@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: wooricard-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes: []
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
